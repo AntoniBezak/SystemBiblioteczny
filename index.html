@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f3ef">
+    <meta name="description" content="Prosty system biblioteczny.">
+    <title>Biblioteczka</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="page">
+      <header class="site-header">
+        <a class="brand" href="./" aria-label="Biblioteczka — strona główna">
+          <svg class="brand__icon" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M5.5 7.5c3.8-.9 7.4-.2 10.5 2.1v16c-3.1-2.3-6.7-3-10.5-2.1z" />
+            <path d="M26.5 7.5c-3.8-.9-7.4-.2-10.5 2.1v16c3.1-2.3 6.7-3 10.5-2.1z" />
+          </svg>
+          <span>Biblioteczka</span>
+        </a>
+        <button class="home-button" type="button" aria-label="Wróć na stronę główną">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="m12.5 4-6 6 6 6M7 10h8" />
+          </svg>
+          <span>Strona główna</span>
+        </button>
+      </header>
+
+      <nav class="actions" aria-label="Działania">
+        <button class="action" type="button" data-action="search">
+          <svg class="action__icon" viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="13.5" cy="13.5" r="7.5" />
+            <path d="m19 19 7 7" />
+          </svg>
+          <span>Szukam książki</span>
+          <svg class="action__arrow" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M5 15 15 5M6 5h9v9" />
+          </svg>
+        </button>
+
+        <button class="action" type="button" data-action="return">
+          <svg class="action__icon" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M7 6.5h12a2 2 0 0 1 2 2v17H9a2 2 0 0 1-2-2z" />
+            <path d="M21 10h4a2 2 0 0 1 2 2v13h-6" />
+            <path d="M12 13h6M12 17h6" />
+          </svg>
+          <span>Odkładam książkę</span>
+          <svg class="action__arrow" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M5 15 15 5M6 5h9v9" />
+          </svg>
+        </button>
+
+        <button class="action" type="button" data-action="add">
+          <svg class="action__icon" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M16 6v20M6 16h20" />
+            <circle cx="16" cy="16" r="12" />
+          </svg>
+          <span>Dodaję książkę</span>
+          <svg class="action__arrow" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M5 15 15 5M6 5h9v9" />
+          </svg>
+        </button>
+      </nav>
+
+      <details class="advanced-functions">
+        <summary class="advanced-functions__toggle">Funkcje zaawansowane</summary>
+        <div class="advanced-functions__menu">
+          <button class="advanced-functions__item" type="button" data-action="print-all-qr">
+            Wydrukuj kody wszystkich książek z bazy danych
+          </button>
+          <p class="advanced-functions__status" role="status" aria-live="polite" hidden></p>
+        </div>
+      </details>
+
+      <section class="search-view" aria-label="Wyszukiwanie książek" hidden>
+        <form class="search-form" role="search">
+          <label class="visually-hidden" for="book-search">Szukaj książki</label>
+          <svg class="search-form__icon" viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="13.5" cy="13.5" r="7.5" />
+            <path d="m19 19 7 7" />
+          </svg>
+          <input
+            id="book-search"
+            name="q"
+            type="search"
+            placeholder="Tytuł książki"
+            autocomplete="off"
+          >
+        </form>
+        <section class="qr-scanner" aria-label="Skanowanie kodu QR" hidden>
+          <video class="qr-scanner__video" playsinline muted aria-hidden="true"></video>
+          <p class="qr-scanner__status" role="status" aria-live="polite"></p>
+        </section>
+        <p class="search-status" role="status" aria-live="polite" hidden></p>
+        <button class="add-book-button" type="button" hidden>Dodaję książkę</button>
+        <ul class="book-results" aria-label="Wyniki wyszukiwania"></ul>
+        <section class="book-details" aria-live="polite" aria-label="Szczegóły książki" hidden>
+          <div class="book-details__actions">
+            <button class="book-details__button" type="button" data-book-action="edit">
+              Edytuj informacje o książce
+            </button>
+            <button class="book-details__button book-details__button--danger" type="button" data-book-action="delete">
+              Usuń z biblioteki
+            </button>
+            <button class="book-details__button" type="button" data-book-action="print-qr">
+              Wydrukuj kod QR
+            </button>
+          </div>
+          <p class="book-action-status" role="status" aria-live="polite" hidden></p>
+          <figure class="book-details__qr-label" hidden>
+            <img class="book-details__qr-image" alt="">
+            <figcaption class="book-details__qr-caption"></figcaption>
+          </figure>
+        </section>
+      </section>
+
+      <section class="add-view" aria-label="Dodawanie książki" hidden>
+        <form class="add-book-form">
+          <input name="requestId" type="hidden" value="">
+          <input name="action" type="hidden" value="create">
+          <input name="targetTitle" type="hidden" value="">
+          <input name="targetAuthor" type="hidden" value="">
+          <input name="targetColor1" type="hidden" value="">
+          <input name="targetColor2" type="hidden" value="">
+          <input name="targetLocation" type="hidden" value="">
+          <input name="targetColumn" type="hidden" value="">
+          <input name="targetRow" type="hidden" value="">
+          <label class="add-book-field">
+            <span>Tytuł</span>
+            <input name="title" type="text" maxlength="250" required>
+          </label>
+          <label class="add-book-field">
+            <span>Autor</span>
+            <input name="author" type="text" maxlength="200" required>
+          </label>
+          <label class="add-book-field">
+            <span>Kolor grzbietu</span>
+            <input name="color1" type="text" maxlength="100" required>
+          </label>
+          <label class="add-book-field">
+            <span>Kolor okładki</span>
+            <input name="color2" type="text" maxlength="100" required>
+          </label>
+          <label class="add-book-field">
+            <span>Szafka</span>
+            <input name="location" type="text" maxlength="200" required>
+          </label>
+          <label class="add-book-field">
+            <span>Kolumna</span>
+            <input name="column" type="text" maxlength="50" required>
+          </label>
+          <label class="add-book-field">
+            <span>Półka</span>
+            <input name="row" type="text" maxlength="50" required>
+          </label>
+          <button class="add-book-submit" type="submit">Dodaj książkę</button>
+        </form>
+        <p class="add-book-status" role="status" aria-live="polite" hidden></p>
+        <section class="qr-label" aria-label="Kod QR książki" hidden>
+          <img class="qr-label__image" alt="">
+          <p class="qr-label__caption"></p>
+        </section>
+        <button class="print-qr-button" type="button" hidden>Drukuj kod QR</button>
+      </section>
+
+      <section class="bulk-qr-print" aria-label="Kody QR wszystkich książek" hidden></section>
+    </main>
+    <iframe class="submission-frame" name="book-submission-frame" title="Wysyłanie książki" hidden></iframe>
+    <script src="assets/vendor/jsQR.js" defer></script>
+    <script src="assets/vendor/qrcode.js" defer></script>
+    <script src="assets/vendor/qrcode_UTF8.js" defer></script>
+    <script src="config.js" defer></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
