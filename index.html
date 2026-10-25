@@ -97,6 +97,15 @@
         <ul class="book-results" aria-label="Wyniki wyszukiwania"></ul>
         <section class="book-details" aria-live="polite" aria-label="Szczegóły książki" hidden>
           <div class="book-details__actions">
+            <button class="book-details__button" type="button" data-book-action="pickup" hidden>
+              Biorę z półki
+            </button>
+            <button class="book-details__button" type="button" data-book-action="shelve" hidden>
+              Odkładam na półkę
+            </button>
+            <button class="book-details__button" type="button" data-book-action="lend" hidden>
+              Pożycz książkę
+            </button>
             <button class="book-details__button" type="button" data-book-action="edit">
               Edytuj informacje o książce
             </button>
@@ -126,6 +135,13 @@
           <input name="targetLocation" type="hidden" value="">
           <input name="targetColumn" type="hidden" value="">
           <input name="targetRow" type="hidden" value="">
+          <input name="targetPublicationDate" type="hidden" value="">
+          <input name="targetPublishingHouse" type="hidden" value="">
+          <input name="targetIllustrator" type="hidden" value="">
+          <input name="targetStatus" type="hidden" value="">
+          <input name="targetBorrower" type="hidden" value="">
+          <input name="status" type="hidden" value="Na półce">
+          <input name="borrower" type="hidden" value="">
           <label class="add-book-field">
             <span>Tytuł</span>
             <input name="title" type="text" maxlength="250" required>
@@ -153,6 +169,18 @@
           <label class="add-book-field">
             <span>Półka</span>
             <input name="row" type="text" maxlength="50" required>
+          </label>
+          <label class="add-book-field">
+            <span>Data publikacji</span>
+            <input name="publicationDate" type="text" maxlength="100">
+          </label>
+          <label class="add-book-field">
+            <span>Wydawnictwo</span>
+            <input name="publishingHouse" type="text" maxlength="200">
+          </label>
+          <label class="add-book-field">
+            <span>Ilustrator</span>
+            <input name="illustrator" type="text" maxlength="200">
           </label>
           <button class="add-book-submit" type="submit">Dodaj książkę</button>
         </form>

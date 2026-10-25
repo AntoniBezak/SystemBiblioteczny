@@ -90,7 +90,9 @@ i opisany wariant to gałąź `main` oraz `/(root)`.
 
 1. W Google Sheets otwórz arkusz używany jako baza książek. W pierwszym
    wierszu umieść nagłówki: `Title`, `Author`, `Color1`, `Color2`, `Column`,
-   `Row` i `Location`. Każda książka powinna zajmować jeden wiersz.
+   `Row`, `Location`, `Publication date`, `Publishing house`, `Illustrator`,
+   `status` i `Borrower`.
+   Każda książka powinna zajmować jeden wiersz.
 2. Wybierz **Plik → Udostępnij → Opublikuj w internecie**.
 3. Wybierz właściwą zakładkę arkusza oraz format **Wartości rozdzielane
    przecinkami (.csv)** i kliknij **Opublikuj**.
@@ -127,15 +129,17 @@ nie używaj endpointu z wrażliwymi danymi.
 
 ### 4. Sprawdź wdrożoną stronę
 
-Po zakończeniu publikacji otwórz adres witryny przez HTTPS. Sprawdź
-wyszukiwanie, szczegóły książki, dodawanie, edycję, usuwanie i drukowanie
-kodów QR. Testowe operacje zapisu wykonuj na testowym wpisie albo arkuszu.
-Skanowanie QR wymaga zezwolenia przeglądarki na użycie kamery.
-
 Przetestuj wyszukiwanie, otwieranie szczegółów, dodawanie, edycję, usuwanie
 oraz drukowanie kodu. Sprawdź również funkcję **Funkcje zaawansowane →
 Wydrukuj kody wszystkich książek z bazy danych**. Operacje zapisu wykonuj na
-testowym wpisie albo w testowym arkuszu.
+testowym wpisie albo w testowym arkuszu. Skanowanie QR wymaga HTTPS i
+zezwolenia przeglądarki na użycie kamery.
+
+W widoku szczegółów przycisk **Biorę z półki** zmienia status z `Na półce` na
+`Nie odłożona`. W trybie **Odkładam książkę**, po zeskanowaniu kodu albo
+wybraniu wyniku, przycisk **Odkładam na półkę** zmienia status z `Nie odłożona`
+lub `Pożyczona` na `Na półce`. Przy zwrocie wypożyczonej książki pole
+`Borrower` jest czyszczone.
 
 ### 5. Publikuj kolejne zmiany
 
@@ -157,21 +161,28 @@ Zmiany w `apps-script/Code.gs` wymagają osobnej publikacji w Google Apps Script
 przesłanie pliku do GitHuba nie aktualizuje endpointu Apps Script. Zazwyczaj
 URL `/exec` pozostaje bez zmian.
 
+Przed zapisem strona sprawdza wersję endpointu. Jeśli Apps Script nie został
+zaktualizowany, formularz pokaże komunikat o nieaktualnym wdrożeniu i nie wyśle
+operacji dodania, edycji, usunięcia ani zmiany statusu.
+
 Wyniki wyszukiwania są filtrowane po tytule i autorze bez rozróżniania wielkości
 liter i polskich znaków.
 
-Po zmianie kodu `apps-script/Code.gs` opublikuj nową wersję wdrożenia:
-otwórz **Wdróż → Zarządzaj wdrożeniami**, edytuj istniejące wdrożenie,
-wybierz **Nowa wersja** i kliknij **Wdróż**. Sam push do GitHuba nie aktualizuje
-Apps Script; URL `/exec` zazwyczaj pozostaje ten sam.
-
-Publiczny endpoint pozwala każdemu dopisywać wiersze do arkusza. Skrypt wymaga
-wszystkich siedmiu pól, sprawdza nagłówki i zabezpiecza wartości przed
-interpretacją jako formuły. Nagłówki arkusza muszą zawierać `Title`, `Author`,
-`Color1`, `Color2`, `Column`, `Row` i `Location`.
-Endpoint obsługuje także edycję i usuwanie. Dopasowuje wiersz po wszystkich
-siedmiu obecnych polach; jeśli znajdzie więcej niż jeden identyczny wpis,
+Publiczny endpoint pozwala każdemu dopisywać wiersze do arkusza. Nagłówki
+arkusza muszą zawierać `Title`, `Author`, `Color1`, `Color2`, `Column`, `Row`,
+`Location`, `Publication date`, `Publishing house`, `Illustrator`, `status`
+i `Borrower`. Wartości daty publikacji, wydawnictwa, ilustratora i wypożyczającego
+są opcjonalne. Status książki musi być jedną z wartości `Na półce`,
+`Nie odłożona` lub `Pożyczona`; nowe książki otrzymują domyślnie `Na półce`.
+Przycisk **Pożycz książkę** zapisuje podane imię i nazwisko w `Borrower` i ustawia
+status `Pożyczona`. Wyszukiwanie pokazuje wtedy `Pożyczona przez: [osoba]`.
+Przy pobraniu z półki użyj **Biorę z półki**, a po odłożeniu **Odkładam na półkę**.
+Skrypt sprawdza nagłówki i zabezpiecza wartości przed interpretacją jako formuły.
+Endpoint obsługuje także edycję, usuwanie i zmianę statusu. Dopasowuje wiersz
+po polach obecnych w arkuszu; jeśli znajdzie więcej niż jeden identyczny wpis,
 odmawia zmiany zamiast modyfikować niejednoznaczny rekord.
+Pożyczenie jest dostępne dla książek ze statusem `Na półce`; po podaniu osoby
+endpoint zapisuje ją w `Borrower` i ustawia status `Pożyczona`.
 Ponieważ wdrożenie jest dostępne dla każdego, każdy odwiedzający stronę może
 dodawać, edytować i usuwać wpisy. Potwierdzenie usunięcia chroni przed
 przypadkowym kliknięciem, ale nie zastępuje autoryzacji; przed udostępnieniem

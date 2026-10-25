@@ -31,6 +31,7 @@ const bookDetailsActions = document.querySelector(".book-details__actions");
 const printAllQrButton = document.querySelector('[data-action="print-all-qr"]');
 const advancedFunctionsStatus = document.querySelector(".advanced-functions__status");
 const bulkQrPrint = document.querySelector(".bulk-qr-print");
+const booksApiVersion = "2026-10-25-lending-1";
 const booksUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT62yhghPmouKRZLZ2EuJL6gWEyj_dH-VLSv7_gboYX84xUVuDMIBCzMkEF3xPxzzdaGMtb2CpkA3lu/pub?output=csv";
 const booksApiUrl = window.BOOKS_API_URL ?? "";
 let books = [];
@@ -40,6 +41,7 @@ let lookupMode = "search";
 let addRequestTimer;
 let addRequestPending = false;
 let pendingRequestId;
+let pendingRequestPhase;
 let pendingBook;
 let pendingQrDataUrl;
 let pendingTargetBook;
@@ -171,6 +173,11 @@ function getBookFormValues(book) {
     location: book.location,
     column: book.column,
     row: book.row,
+    publicationDate: book.publicationDate,
+    publishingHouse: book.publishingHouse,
+    illustrator: book.illustrator,
+    status: book.status,
+    borrower: book.borrower,
   };
 }
 
@@ -234,10 +241,14 @@ function parseCsv(csv) {
   const columnIndex = headers.indexOf("column");
   const rowIndex = headers.indexOf("row");
   const locationIndex = headers.indexOf("location");
+  const publicationDateIndex = headers.indexOf("publication date");
+  const publishingHouseIndex = headers.indexOf("publishing house");
+  const illustratorIndex = headers.indexOf("illustrator");
+  const statusIndex = headers.indexOf("status");
 
-  const requiredHeaders = ["title", "author", "color1", "color2", "column", "row", "location"];
+  const requiredHeaders = ["title", "author", "color1", "color2", "column", "row", "location", "status", "borrower"];
   if (requiredHeaders.some((header) => !headers.includes(header))) {
-    throw new Error("Plik CSV musi zawierać kolumny Title, Author, Color1, Color2, Column, Row i Location.");
+    throw new Error("Plik CSV musi zawierać kolumny Title, Author, Color1, Color2, Column, Row, Location, status i Borrower.");
   }
 
   return rows.slice(1)
@@ -249,6 +260,11 @@ function parseCsv(csv) {
       column: (values[columnIndex] ?? "").trim(),
       row: (values[rowIndex] ?? "").trim(),
       location: (values[locationIndex] ?? "").trim(),
+      publicationDate: (values[publicationDateIndex] ?? "").trim(),
+      publishingHouse: (values[publishingHouseIndex] ?? "").trim(),
+      illustrator: (values[illustratorIndex] ?? "").trim(),
+      status: (values[statusIndex] ?? "").trim(),
+      borrower: (values[headers.indexOf("borrower")] ?? "").trim(),
     }))
     .filter((book) => book.title !== "" || book.author !== "");
 }
@@ -386,17 +402,34 @@ function showBookDetails(book) {
   page.classList.remove("page--details-qr-ready");
   setBookActionStatus("");
 
-  const heading = document.createElement("h2");
-  heading.className = "book-details__title";
-  heading.tabIndex = -1;
-  heading.textContent = book.title;
-  bookDetails.append(heading);
+  if (lookupMode === "search") {
+    const heading = document.createElement("h2");
+    heading.className = "book-details__title";
+    heading.tabIndex = -1;
+    heading.textContent = book.title;
+    bookDetails.append(heading);
 
-  if (book.author !== "") {
-    const author = document.createElement("p");
-    author.className = "book-details__author";
-    author.textContent = book.author;
-    bookDetails.append(author);
+    if (book.author !== "") {
+      const author = document.createElement("p");
+      author.className = "book-details__author";
+      author.textContent = book.author;
+      bookDetails.append(author);
+    }
+
+    const bookStatus = book.status || "Na półce";
+    if (bookStatus === "Na półce" || bookStatus === "Nie odłożona" || bookStatus === "Pożyczona") {
+      const status = document.createElement("p");
+      const statusClass = bookStatus === "Na półce"
+        ? "available"
+        : bookStatus === "Nie odłożona"
+          ? "not-shelved"
+          : "loaned";
+      status.className = `book-details__availability book-details__availability--${statusClass}`;
+      status.textContent = bookStatus === "Pożyczona" && book.borrower
+        ? `Pożyczona przez: ${book.borrower}`
+        : bookStatus;
+      bookDetails.append(status);
+    }
   }
 
   const fields = [
@@ -405,10 +438,16 @@ function showBookDetails(book) {
     ["Półka", book.row],
   ];
   if (lookupMode === "search") {
+    fields.push(
+      ["Data publikacji", book.publicationDate],
+      ["Wydawnictwo", book.publishingHouse],
+      ["Ilustrator", book.illustrator],
+    );
     fields.push(["Kolor grzbietu", book.color]);
   }
   const list = document.createElement("dl");
   list.className = "book-details__fields";
+  list.tabIndex = -1;
 
   fields.forEach(([label, value]) => {
     if (value === "") {
@@ -427,10 +466,21 @@ function showBookDetails(book) {
   }
 
   bookDetails.append(bookDetailsActions, bookActionStatus, bookDetailsQrLabel);
+  const bookStatus = book.status || "Na półce";
+  bookDetailsActions.querySelector('[data-book-action="pickup"]').hidden =
+    lookupMode !== "search" || bookStatus !== "Na półce";
+  bookDetailsActions.querySelector('[data-book-action="shelve"]').hidden =
+    lookupMode !== "return" || !["Nie odłożona", "Pożyczona"].includes(bookStatus);
+  bookDetailsActions.querySelector('[data-book-action="lend"]').hidden =
+    lookupMode !== "search" || bookStatus !== "Na półce";
   bookDetailsQrCaption.textContent = book.title;
   bookDetails.hidden = false;
   page.classList.add("page--book-selected");
-  heading.focus();
+  if (lookupMode === "search") {
+    bookDetails.querySelector(".book-details__title").focus();
+  } else {
+    list.focus();
+  }
 }
 
 function renderResults() {
@@ -553,6 +603,7 @@ function startAddBook(title = "") {
   addBookForm.reset();
   addBookForm.dataset.operation = "create";
   addBookForm.elements.action.value = "create";
+  addBookForm.elements.status.value = "Na półce";
   addBookForm.querySelector(".add-book-submit").textContent = "Dodaj książkę";
   addBookForm.hidden = false;
   qrLabel.hidden = true;
@@ -588,6 +639,11 @@ function startEditBook(book) {
   addBookForm.elements.location.value = book.location;
   addBookForm.elements.column.value = book.column;
   addBookForm.elements.row.value = book.row;
+  addBookForm.elements.publicationDate.value = book.publicationDate;
+  addBookForm.elements.publishingHouse.value = book.publishingHouse;
+  addBookForm.elements.illustrator.value = book.illustrator;
+  addBookForm.elements.status.value = book.status || "Na półce";
+  addBookForm.elements.borrower.value = book.borrower || "";
   pendingTargetBook = book;
   setAddStatus("");
   addBookForm.elements.title.focus();
@@ -603,8 +659,9 @@ function sendBookRequest(operation, book, targetBook = book) {
   pendingBook = book;
   pendingTargetBook = targetBook;
   pendingRequestId = createRequestId();
+  pendingRequestPhase = "version-check";
   addBookForm.elements.requestId.value = pendingRequestId;
-  addBookForm.elements.action.value = operation;
+  addBookForm.elements.action.value = "version";
 
   const targetValues = getBookFormValues(targetBook);
   Object.entries(targetValues).forEach(([name, value]) => {
@@ -629,15 +686,29 @@ function sendBookRequest(operation, book, targetBook = book) {
     bookDetailsActions.querySelectorAll("button").forEach((button) => {
       button.disabled = true;
     });
-    setBookActionStatus("Usuwanie książki…");
+    setBookActionStatus(operation === "delete"
+      ? "Usuwanie książki…"
+      : operation === "lend"
+        ? "Rejestrowanie wypożyczenia…"
+      : operation === "set-status"
+        ? "Aktualizowanie statusu książki…"
+        : "Przetwarzanie…");
   }
-  HTMLFormElement.prototype.submit.call(addBookForm);
+  submitBookApiForm();
+  startBookRequestTimeout();
+}
 
+function submitBookApiForm() {
+  HTMLFormElement.prototype.submit.call(addBookForm);
+}
+
+function startBookRequestTimeout() {
   window.clearTimeout(addRequestTimer);
   addRequestTimer = window.setTimeout(() => {
     addRequestPending = false;
+    pendingRequestPhase = undefined;
     addBookSubmit.disabled = false;
-    if (pendingOperation === "delete") {
+    if (pendingOperation === "delete" || pendingOperation === "set-status" || pendingOperation === "lend") {
       bookDetailsActions.querySelectorAll("button").forEach((button) => {
         button.disabled = false;
       });
@@ -733,6 +804,11 @@ addBookForm.addEventListener("submit", (event) => {
     location: String(normalizedFormData.get("location")),
     column: String(normalizedFormData.get("column")),
     row: String(normalizedFormData.get("row")),
+    publicationDate: String(normalizedFormData.get("publicationDate")),
+    publishingHouse: String(normalizedFormData.get("publishingHouse")),
+    illustrator: String(normalizedFormData.get("illustrator")),
+    status: String(normalizedFormData.get("status")),
+    borrower: String(normalizedFormData.get("borrower")),
   };
 
   const operation = addBookForm.dataset.operation || "create";
@@ -762,6 +838,28 @@ bookDetailsActions.addEventListener("click", (event) => {
     if (window.confirm(confirmation)) {
       sendBookRequest("delete", selectedBook);
     }
+  } else if (button.dataset.bookAction === "pickup") {
+    sendBookRequest("set-status", { ...selectedBook, status: "Nie odłożona" }, selectedBook);
+  } else if (button.dataset.bookAction === "shelve") {
+    sendBookRequest("set-status", { ...selectedBook, status: "Na półce", borrower: "" }, selectedBook);
+  } else if (button.dataset.bookAction === "lend") {
+    const borrower = window.prompt("Podaj imię i nazwisko osoby wypożyczającej książkę:");
+    if (borrower === null) {
+      return;
+    }
+    if (!borrower.trim()) {
+      setBookActionStatus("Wpisz imię i nazwisko osoby wypożyczającej książkę.", true);
+      return;
+    }
+    if (borrower.trim().length > 200) {
+      setBookActionStatus("Imię i nazwisko nie może przekraczać 200 znaków.", true);
+      return;
+    }
+    sendBookRequest("lend", {
+      ...selectedBook,
+      status: "Pożyczona",
+      borrower: borrower.trim(),
+    }, selectedBook);
   } else if (button.dataset.bookAction === "print-qr") {
     try {
       showBookDetailsQr(selectedBook);
@@ -783,17 +881,48 @@ window.addEventListener("message", (event) => {
     return;
   }
 
-  window.clearTimeout(addRequestTimer);
   if (!addRequestPending) {
     return;
   }
+
+  if (pendingRequestPhase === "version-check") {
+    if (!event.data.ok || event.data.apiVersion !== booksApiVersion) {
+      window.clearTimeout(addRequestTimer);
+      addRequestPending = false;
+      pendingRequestPhase = undefined;
+      pendingRequestId = undefined;
+      addBookSubmit.disabled = false;
+      const versionError = "Wdrożona wersja Apps Script jest nieaktualna. Zaktualizuj apps-script/Code.gs i wdróż nową wersję; żądana operacja nie została wysłana.";
+      if (pendingOperation === "delete" || pendingOperation === "set-status" || pendingOperation === "lend") {
+        bookDetailsActions.querySelectorAll("button").forEach((button) => {
+          button.disabled = false;
+        });
+        setBookActionStatus(versionError, true);
+      } else {
+        setAddStatus(versionError, true);
+      }
+      pendingOperation = undefined;
+      return;
+    }
+
+    pendingRequestPhase = "mutation";
+    addBookForm.elements.action.value = pendingOperation;
+    submitBookApiForm();
+    startBookRequestTimeout();
+    return;
+  }
+
+  window.clearTimeout(addRequestTimer);
   addRequestPending = false;
+  pendingRequestPhase = undefined;
   pendingRequestId = undefined;
   addBookSubmit.disabled = false;
 
-  if (!event.data.ok) {
-    const errorMessage = event.data.message || "Operacja nie powiodła się.";
-    if (pendingOperation === "delete") {
+  if (!event.data.ok || event.data.apiVersion !== booksApiVersion) {
+    const errorMessage = event.data.apiVersion !== booksApiVersion
+      ? "Nie można potwierdzić zgodności wdrożenia Apps Script. Sprawdź wdrożoną wersję i arkusz przed ponowną próbą."
+      : event.data.message || "Operacja nie powiodła się.";
+    if (pendingOperation === "delete" || pendingOperation === "set-status" || pendingOperation === "lend") {
       bookDetailsActions.querySelectorAll("button").forEach((button) => {
         button.disabled = false;
       });
@@ -830,6 +959,19 @@ window.addEventListener("message", (event) => {
     bookResults.replaceChildren();
     searchView.hidden = false;
     addView.hidden = true;
+  } else if (pendingOperation === "set-status" || pendingOperation === "lend") {
+    bookDetailsActions.querySelectorAll("button").forEach((button) => {
+      button.disabled = false;
+    });
+    Object.assign(pendingTargetBook, pendingBook);
+    showBookDetails(pendingTargetBook);
+    if (pendingOperation === "lend") {
+      setBookActionStatus(`Książka została pożyczona: ${pendingBook.borrower}.`);
+    } else {
+      setBookActionStatus(pendingBook.status === "Na półce"
+        ? "Książka została oznaczona jako odłożona na półkę."
+        : "Książka została oznaczona jako nieodłożona.");
+    }
   }
 
   pendingBook = undefined;

@@ -1,3 +1,6 @@
+var BOOKS_API_VERSION = "2026-10-25-lending-1";
+var VALID_BOOK_STATUSES = ["Na półce", "Nie odłożona", "Pożyczona"];
+
 function setupBookApi() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = spreadsheet.getActiveSheet();
@@ -17,8 +20,11 @@ function doPost(event) {
     if (!values) {
       throw new Error("Brak danych formularza.");
     }
-    if (["create", "update", "delete"].indexOf(action) === -1) {
+    if (["version", "create", "update", "delete", "set-status", "lend"].indexOf(action) === -1) {
       throw new Error("Nieznany rodzaj operacji.");
+    }
+    if (action === "version") {
+      return makeBookApiResponse({ ok: true, requestId: requestId });
     }
 
     const properties = PropertiesService.getScriptProperties();
@@ -42,17 +48,46 @@ function doPost(event) {
 
       if (action === "create") {
         const book = getBookFields(values, "");
+        book.status = validateBookStatus(book.status || "Na półce");
         const newRow = headers.map(function (header) {
-          const value = book[header];
+          const field = getBookFieldForHeader(header);
+          const value = field ? book[field] : undefined;
           return value === undefined ? "" : sanitizeBookCell(value);
         });
         sheet.appendRow(newRow);
       } else if (action === "update") {
         const book = getBookFields(values, "");
+        book.status = validateBookStatus(book.status || "Na półce");
         Object.keys(book).forEach(function (header) {
-          sheet.getRange(rowNumber, headers.indexOf(header) + 1)
+          const columnIndex = headers.indexOf(getBookHeaderForField(header));
+          if (columnIndex === -1) {
+            return;
+          }
+          sheet.getRange(rowNumber, columnIndex + 1)
             .setValue(sanitizeBookCell(book[header]));
         });
+      } else if (action === "set-status") {
+        const statusColumn = headers.indexOf("status");
+        sheet.getRange(rowNumber, statusColumn + 1)
+          .setValue(validateBookStatus(values.status));
+        if (values.status === "Na półce") {
+          sheet.getRange(rowNumber, headers.indexOf("borrower") + 1).setValue("");
+        }
+      } else if (action === "lend") {
+        const currentStatus = String(sheet.getRange(rowNumber, headers.indexOf("status") + 1).getDisplayValue()).trim();
+        if (currentStatus !== "Na półce") {
+          throw new Error("Można pożyczyć tylko książkę oznaczoną jako „Na półce”.");
+        }
+        const borrower = typeof values.borrower === "string" ? values.borrower.trim() : "";
+        if (!borrower) {
+          throw new Error("Podaj imię i nazwisko osoby wypożyczającej książkę.");
+        }
+        if (borrower.length > 200) {
+          throw new Error("Imię i nazwisko nie może przekraczać 200 znaków.");
+        }
+        sheet.getRange(rowNumber, headers.indexOf("status") + 1).setValue("Pożyczona");
+        sheet.getRange(rowNumber, headers.indexOf("borrower") + 1)
+          .setValue(sanitizeBookCell(borrower));
       } else {
         sheet.deleteRow(rowNumber);
       }
@@ -82,7 +117,20 @@ function getBookHeaders(sheet) {
     .map(function (header) {
       return header.trim().toLowerCase();
     });
-  const requiredHeaders = ["title", "author", "color1", "color2", "column", "row", "location"];
+  const requiredHeaders = [
+    "title",
+    "author",
+    "color1",
+    "color2",
+    "column",
+    "row",
+    "location",
+    "publication date",
+    "publishing house",
+    "illustrator",
+    "status",
+    "borrower",
+  ];
   const missingHeaders = requiredHeaders.filter(function (header) {
     return headers.indexOf(header) === -1;
   });
@@ -93,16 +141,21 @@ function getBookHeaders(sheet) {
 }
 
 function getBookFields(values, prefix) {
-  const fields = ["title", "author", "color1", "color2", "column", "row", "location"];
+  const requiredFields = ["title", "author", "color1", "color2", "column", "row", "location"];
+  const optionalFields = ["publicationDate", "publishingHouse", "illustrator", "status", "borrower"];
+  const fields = requiredFields.concat(optionalFields);
   const book = {};
 
   fields.forEach(function (field) {
-    const parameter = prefix
-      ? prefix + field.charAt(0).toUpperCase() + field.slice(1)
-      : field;
+    const parameter = prefix ? prefix + field.charAt(0).toUpperCase() + field.slice(1) : field;
     const value = values[parameter];
-    if (typeof value !== "string" || (!prefix && !value.trim())) {
-      throw new Error("Uzupełnij wszystkie pola książki.");
+    const isRequired = requiredFields.indexOf(field) !== -1;
+    if (typeof value !== "string" || (!prefix && isRequired && !value.trim())) {
+      if (isRequired) {
+        throw new Error("Uzupełnij wszystkie wymagane pola książki.");
+      }
+      book[field] = "";
+      return;
     }
     if (value.length > 250) {
       throw new Error("Jedna z wartości przekracza dozwoloną długość.");
@@ -112,19 +165,47 @@ function getBookFields(values, prefix) {
   return book;
 }
 
+function validateBookStatus(status) {
+  if (VALID_BOOK_STATUSES.indexOf(status) === -1) {
+    throw new Error("Nieprawidłowy status książki.");
+  }
+  return status;
+}
+
+function getBookHeaderForField(field) {
+  const headersByField = {
+    publicationDate: "publication date",
+    publishingHouse: "publishing house",
+    illustrator: "illustrator",
+  };
+  return headersByField[field] || field.toLowerCase();
+}
+
+function getBookFieldForHeader(header) {
+  const fieldsByHeader = {
+    "publication date": "publicationDate",
+    "publishing house": "publishingHouse",
+    illustrator: "illustrator",
+  };
+  return fieldsByHeader[header] || header;
+}
+
 function findBookRow(sheet, headers, target) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) {
     throw new Error("Książka nie została znaleziona w arkuszu.");
   }
 
-  const columnIndexes = Object.keys(target).map(function (field) {
-    return headers.indexOf(field);
+  const targetFields = Object.keys(target).filter(function (field) {
+    return headers.indexOf(getBookHeaderForField(field)) !== -1;
+  });
+  const columnIndexes = targetFields.map(function (field) {
+    return headers.indexOf(getBookHeaderForField(field));
   });
   const rows = sheet.getRange(2, 1, lastRow - 1, headers.length).getDisplayValues();
   const matches = [];
   rows.forEach(function (row, index) {
-    const isMatch = Object.keys(target).every(function (field, fieldIndex) {
+    const isMatch = targetFields.every(function (field, fieldIndex) {
       return String(row[columnIndexes[fieldIndex]]).trim() === target[field];
     });
     if (isMatch) {
@@ -151,6 +232,7 @@ function makeBookApiResponse(result) {
     ok: result.ok,
     message: result.message || "",
     requestId: result.requestId || "",
+    apiVersion: BOOKS_API_VERSION,
   }).replace(/</g, "\\u003c");
   const html = '<!doctype html><html><body><script>'
     + "window.top.postMessage(" + message + ", '*');"

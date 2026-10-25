@@ -570,6 +570,26 @@ input {
   line-height: 1.4;
 }
 
+.book-details__availability {
+  width: fit-content;
+  margin: 12px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.book-details__availability--available {
+  color: #357044;
+}
+
+.book-details__availability--not-shelved {
+  color: #b33d36;
+}
+
+.book-details__availability--loaned {
+  color: #b33d36;
+}
+
 .book-details__fields {
   display: grid;
   grid-template-columns: max-content 1fr;
