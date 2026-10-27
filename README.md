@@ -131,9 +131,13 @@ nie używaj endpointu z wrażliwymi danymi.
 
 Przetestuj wyszukiwanie, otwieranie szczegółów, dodawanie, edycję, usuwanie
 oraz drukowanie kodu. Sprawdź również funkcję **Funkcje zaawansowane →
-Wydrukuj kody wszystkich książek z bazy danych**. Operacje zapisu wykonuj na
-testowym wpisie albo w testowym arkuszu. Skanowanie QR wymaga HTTPS i
-zezwolenia przeglądarki na użycie kamery.
+Wydrukuj kody wszystkich książek z bazy danych** oraz pobieranie księgozbioru
+jako pliku CSV. Plik zawiera wszystkie kolumny książek, w tym status i
+wypożyczającego. Wyszukiwanie zaawansowane pozwala łączyć dowolne słowa z
+kryteriami dotyczącymi autora, ilustratora, wydawnictwa, kolorów i położenia
+książki; dopasowanie nie uwzględnia wielkości liter ani polskich znaków
+diakrytycznych. Operacje zapisu wykonuj na testowym wpisie albo w testowym
+arkuszu. Skanowanie QR wymaga HTTPS i zezwolenia przeglądarki na użycie kamery.
 
 W widoku szczegółów przycisk **Biorę z półki** zmienia status z `Na półce` na
 `Nie odłożona`. W trybie **Odkładam książkę**, po zeskanowaniu kodu albo

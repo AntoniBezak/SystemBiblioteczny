@@ -69,6 +69,12 @@
           <button class="advanced-functions__item" type="button" data-action="print-all-qr">
             Wydrukuj kody wszystkich książek z bazy danych
           </button>
+          <button class="advanced-functions__item" type="button" data-action="download-books">
+            Pobierz księgozbiór jako plik CSV
+          </button>
+          <button class="advanced-functions__item" type="button" data-action="advanced-search">
+            Wyszukiwanie zaawansowane
+          </button>
           <p class="advanced-functions__status" role="status" aria-live="polite" hidden></p>
         </div>
       </details>
@@ -87,6 +93,52 @@
             placeholder="Tytuł książki"
             autocomplete="off"
           >
+        </form>
+        <form class="advanced-search-form" role="search" aria-label="Wyszukiwanie zaawansowane" hidden>
+          <label class="add-book-field advanced-search-form__wide">
+            <span>Dowolne informacje o książce</span>
+            <input name="query" type="search" placeholder="Wpisz tytuł, fragment, słowa lub inne szczegóły" autocomplete="off">
+          </label>
+          <label class="add-book-field">
+            <span>Autor</span>
+            <input name="author" type="search" autocomplete="off">
+          </label>
+          <label class="add-book-field">
+            <span>Ilustrator</span>
+            <input name="illustrator" type="search" autocomplete="off">
+          </label>
+          <label class="add-book-field">
+            <span>Wydawnictwo</span>
+            <input name="publishingHouse" type="search" autocomplete="off">
+          </label>
+          <label class="add-book-field">
+            <span>Data publikacji</span>
+            <input name="publicationDate" type="search" autocomplete="off">
+          </label>
+          <label class="add-book-field">
+            <span>Kolor okładki</span>
+            <input name="color2" type="search" autocomplete="off">
+          </label>
+          <label class="add-book-field">
+            <span>Kolor grzbietu</span>
+            <input name="color" type="search" autocomplete="off">
+          </label>
+          <label class="add-book-field">
+            <span>Szafka</span>
+            <input name="location" type="search" autocomplete="off">
+          </label>
+          <label class="add-book-field">
+            <span>Kolumna</span>
+            <input name="column" type="search" autocomplete="off">
+          </label>
+          <label class="add-book-field">
+            <span>Półka</span>
+            <input name="row" type="search" autocomplete="off">
+          </label>
+          <div class="advanced-search-form__actions">
+            <button class="add-book-submit" type="submit">Szukaj</button>
+            <button class="advanced-search-form__clear" type="reset">Wyczyść pola</button>
+          </div>
         </form>
         <section class="qr-scanner" aria-label="Skanowanie kodu QR" hidden>
           <video class="qr-scanner__video" playsinline muted aria-hidden="true"></video>

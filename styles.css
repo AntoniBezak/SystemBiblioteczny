@@ -106,7 +106,8 @@ input {
 
 .actions[hidden],
 .search-view[hidden],
-.add-view[hidden] {
+.add-view[hidden],
+.advanced-search-form[hidden] {
   display: none;
 }
 
@@ -386,6 +387,57 @@ input {
   border-radius: 8px;
   background: #fbfaf7;
   transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.advanced-search-form {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid #e2e1d9;
+  border-radius: 8px;
+  background: #fbfaf7;
+}
+
+.advanced-search-form__wide,
+.advanced-search-form__actions {
+  grid-column: 1 / -1;
+}
+
+.advanced-search-form__actions {
+  display: flex;
+  gap: 12px;
+}
+
+.advanced-search-form__actions .add-book-submit {
+  flex: 1;
+}
+
+.advanced-search-form__clear {
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid #d8d9d1;
+  border-radius: 7px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.advanced-search-form__clear:hover {
+  border-color: #aab5a4;
+}
+
+.advanced-search-form__clear:focus-visible {
+  outline: 3px solid #738b70;
+  outline-offset: 3px;
+}
+
+.page--advanced-search .search-form {
+  display: none;
+}
+
+.page--book-selected .advanced-search-form {
+  display: none;
 }
 
 .search-form:focus-within {
@@ -790,6 +842,20 @@ input {
     grid-template-columns: 1fr;
     gap: 14px;
     padding: 18px;
+  }
+
+  .advanced-search-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .advanced-search-form .add-book-field {
+    grid-column: 1 / -1;
+  }
+
+  .advanced-search-form__actions {
+    flex-direction: column;
   }
 
   .book-details__actions {

@@ -5,12 +5,14 @@ const searchView = document.querySelector(".search-view");
 const addView = document.querySelector(".add-view");
 const searchInput = document.querySelector("#book-search");
 const searchForm = document.querySelector(".search-form");
+const advancedSearchForm = document.querySelector(".advanced-search-form");
 const qrScanner = document.querySelector(".qr-scanner");
 const qrScannerVideo = document.querySelector(".qr-scanner__video");
 const qrScannerStatus = document.querySelector(".qr-scanner__status");
 const searchAction = document.querySelector('[data-action="search"]');
 const returnAction = document.querySelector('[data-action="return"]');
 const addAction = document.querySelector('[data-action="add"]');
+const advancedSearchAction = document.querySelector('[data-action="advanced-search"]');
 const searchStatus = document.querySelector(".search-status");
 const addBookButton = document.querySelector(".add-book-button");
 const addBookForm = document.querySelector(".add-book-form");
@@ -29,6 +31,8 @@ const bookDetailsQrImage = document.querySelector(".book-details__qr-image");
 const bookDetailsQrCaption = document.querySelector(".book-details__qr-caption");
 const bookDetailsActions = document.querySelector(".book-details__actions");
 const printAllQrButton = document.querySelector('[data-action="print-all-qr"]');
+const downloadBooksButton = document.querySelector('[data-action="download-books"]');
+const advancedFunctionsMenu = document.querySelector(".advanced-functions");
 const advancedFunctionsStatus = document.querySelector(".advanced-functions__status");
 const bulkQrPrint = document.querySelector(".bulk-qr-print");
 const booksApiVersion = "2026-10-25-lending-1";
@@ -104,6 +108,74 @@ function setAdvancedFunctionsStatus(message, isError = false) {
   advancedFunctionsStatus.textContent = message;
   advancedFunctionsStatus.classList.toggle("advanced-functions__status--error", isError);
   advancedFunctionsStatus.hidden = message === "";
+}
+
+function createBooksCsv(loadedBooks) {
+  const headers = [
+    "Title",
+    "Author",
+    "Color1",
+    "Color2",
+    "Column",
+    "Row",
+    "Location",
+    "Publication date",
+    "Publishing house",
+    "Illustrator",
+    "status",
+    "Borrower",
+  ];
+  const values = loadedBooks.map((book) => [
+    book.title,
+    book.author,
+    book.color,
+    book.color2,
+    book.column,
+    book.row,
+    book.location,
+    book.publicationDate,
+    book.publishingHouse,
+    book.illustrator,
+    book.status,
+    book.borrower,
+  ]);
+  const escapeCsvValue = (value) => {
+    const text = value ?? "";
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  const rows = [headers, ...values].map((row) => row.map(escapeCsvValue).join(","));
+
+  return `\uFEFF${rows.join("\r\n")}`;
+}
+
+async function downloadBooksCsv() {
+  if (downloadBooksButton.disabled) {
+    return;
+  }
+
+  downloadBooksButton.disabled = true;
+  setAdvancedFunctionsStatus("Wczytywanie księgozbioru…");
+
+  try {
+    const loadedBooks = await loadBooks(true);
+    if (!loadedBooks) {
+      throw new Error("Nie udało się wczytać listy książek. Sprawdź połączenie i dostęp do arkusza.");
+    }
+
+    const file = new Blob([createBooksCsv(loadedBooks)], { type: "text/csv;charset=utf-8" });
+    const fileUrl = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = fileUrl;
+    link.download = `ksiegozbior-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+    setAdvancedFunctionsStatus(`Pobrano księgozbiór (${loadedBooks.length} książek).`);
+  } catch (error) {
+    console.error("Nie udało się pobrać księgozbioru:", error);
+    setAdvancedFunctionsStatus(error.message || "Nie udało się pobrać księgozbioru.", true);
+  } finally {
+    downloadBooksButton.disabled = false;
+  }
 }
 
 async function printAllBookQrs() {
@@ -278,9 +350,24 @@ function normalizeText(value) {
     .trim();
 }
 
+function normalizeSearchValue(value) {
+  return normalizeText(value)
+    .replace(/[^\p{Letter}\p{Number}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 function showStatus(message) {
   searchStatus.textContent = message;
   searchStatus.hidden = message === "";
+}
+
+function renderCurrentResults() {
+  if (lookupMode === "advanced") {
+    renderAdvancedResults();
+  } else {
+    renderResults();
+  }
 }
 
 function stopQrScanner(message = "") {
@@ -402,7 +489,7 @@ function showBookDetails(book) {
   page.classList.remove("page--details-qr-ready");
   setBookActionStatus("");
 
-  if (lookupMode === "search") {
+  if (lookupMode !== "return") {
     const heading = document.createElement("h2");
     heading.className = "book-details__title";
     heading.tabIndex = -1;
@@ -437,7 +524,7 @@ function showBookDetails(book) {
     ["Kolumna", book.column],
     ["Półka", book.row],
   ];
-  if (lookupMode === "search") {
+  if (lookupMode !== "return") {
     fields.push(
       ["Data publikacji", book.publicationDate],
       ["Wydawnictwo", book.publishingHouse],
@@ -468,15 +555,15 @@ function showBookDetails(book) {
   bookDetails.append(bookDetailsActions, bookActionStatus, bookDetailsQrLabel);
   const bookStatus = book.status || "Na półce";
   bookDetailsActions.querySelector('[data-book-action="pickup"]').hidden =
-    lookupMode !== "search" || bookStatus !== "Na półce";
+    !["search", "advanced"].includes(lookupMode) || bookStatus !== "Na półce";
   bookDetailsActions.querySelector('[data-book-action="shelve"]').hidden =
     lookupMode !== "return" || !["Nie odłożona", "Pożyczona"].includes(bookStatus);
   bookDetailsActions.querySelector('[data-book-action="lend"]').hidden =
-    lookupMode !== "search" || bookStatus !== "Na półce";
+    !["search", "advanced"].includes(lookupMode) || bookStatus !== "Na półce";
   bookDetailsQrCaption.textContent = book.title;
   bookDetails.hidden = false;
   page.classList.add("page--book-selected");
-  if (lookupMode === "search") {
+  if (lookupMode !== "return") {
     bookDetails.querySelector(".book-details__title").focus();
   } else {
     list.focus();
@@ -545,6 +632,99 @@ function renderResults() {
   bookResults.append(fragment);
 }
 
+function renderAdvancedResults() {
+  const formData = new FormData(advancedSearchForm);
+  const query = normalizeSearchValue(String(formData.get("query") ?? ""));
+  const queryTerms = query === "" ? [] : query.split(" ");
+  const searchableFields = [
+    ["author", "author"],
+    ["illustrator", "illustrator"],
+    ["publishingHouse", "publishingHouse"],
+    ["publicationDate", "publicationDate"],
+    ["color2", "color2"],
+    ["color", "color"],
+    ["location", "location"],
+    ["column", "column"],
+    ["row", "row"],
+  ];
+  const criteria = searchableFields
+    .map(([inputName, bookField]) => [
+      bookField,
+      normalizeSearchValue(String(formData.get(inputName) ?? "")).split(" "),
+    ])
+    .filter(([, terms]) => terms[0] !== "");
+
+  bookResults.replaceChildren();
+  bookDetails.hidden = true;
+  bookDetails.replaceChildren();
+  selectedBook = undefined;
+  page.classList.remove("page--book-selected");
+
+  if (!booksLoaded) {
+    return;
+  }
+
+  if (queryTerms.length === 0 && criteria.length === 0) {
+    showStatus("Wpisz przynajmniej jedną informację o książce.");
+    return;
+  }
+
+  const matches = books.filter((book) => {
+    return matchesAdvancedSearch(book, queryTerms, criteria);
+  });
+
+  if (matches.length === 0) {
+    showStatus("Nie znaleziono książek. Spróbuj wpisać mniej szczegółów.");
+    return;
+  }
+
+  showStatus(`Znaleziono książek: ${matches.length}.`);
+  const fragment = document.createDocumentFragment();
+
+  matches.forEach((book) => {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    const title = document.createElement("span");
+    const author = document.createElement("span");
+
+    item.className = "book-result";
+    button.className = "book-result__button";
+    button.type = "button";
+    title.className = "book-result__title";
+    author.className = "book-result__author";
+    title.textContent = book.title;
+    author.textContent = book.author;
+    button.append(title, author);
+    button.addEventListener("click", () => showBookDetails(book));
+    item.append(button);
+    fragment.append(item);
+  });
+
+  bookResults.append(fragment);
+}
+
+function matchesAdvancedSearch(book, queryTerms, criteria) {
+  const searchableText = normalizeSearchValue([
+    book.title,
+    book.author,
+    book.color,
+    book.color2,
+    book.column,
+    book.row,
+    book.location,
+    book.publicationDate,
+    book.publishingHouse,
+    book.illustrator,
+    book.status,
+    book.borrower,
+  ].join(" "));
+
+  return queryTerms.every((term) => searchableText.includes(term))
+    && criteria.every(([bookField, terms]) =>
+      terms.every((term) => normalizeSearchValue(book[bookField]).includes(term))
+    );
+}
+
 function loadBooks(forceRefresh = false) {
   if (booksLoaded && !forceRefresh) {
     if (pendingScannedCode) {
@@ -552,7 +732,7 @@ function loadBooks(forceRefresh = false) {
       pendingScannedCode = undefined;
       handleScannedCode(scannedCode);
     } else if (!returnScanMode) {
-      renderResults();
+      renderCurrentResults();
     }
     return Promise.resolve(books);
   }
@@ -578,7 +758,7 @@ function loadBooks(forceRefresh = false) {
         pendingScannedCode = undefined;
         handleScannedCode(scannedCode);
       } else if (!returnScanMode) {
-        renderResults();
+        renderCurrentResults();
       }
       return books;
     } catch (error) {
@@ -726,6 +906,9 @@ function startLookup(mode) {
   pendingScannedCode = undefined;
   scannedCodeUnmatched = false;
   addView.hidden = true;
+  advancedSearchForm.hidden = true;
+  searchForm.hidden = false;
+  page.classList.remove("page--advanced-search");
   searchInput.value = "";
   searchInput.placeholder = mode === "return" ? "Tytuł odkładanej książki" : "Tytuł, autor lub słowo kluczowe";
   searchInput.labels[0].textContent = mode === "return" ? "Wpisz tytuł odkładanej książki" : "Szukaj książki";
@@ -748,13 +931,43 @@ function startLookup(mode) {
   loadBooks();
 }
 
+function startAdvancedSearch() {
+  stopQrScanner();
+  advancedFunctionsMenu.open = false;
+  lookupMode = "advanced";
+  returnScanMode = false;
+  pendingScannedCode = undefined;
+  scannedCodeUnmatched = false;
+  addView.hidden = true;
+  searchInput.value = "";
+  advancedSearchForm.reset();
+  advancedSearchForm.hidden = false;
+  searchForm.hidden = true;
+  addBookButton.hidden = true;
+  bookResults.replaceChildren();
+  bookDetails.replaceChildren();
+  bookDetails.hidden = true;
+  selectedBook = undefined;
+  page.classList.remove("page--book-selected");
+  page.classList.remove("page--return-scanning");
+  page.classList.remove("page--details-qr-ready");
+  page.classList.add("page--advanced-search");
+  actions.hidden = true;
+  searchView.hidden = false;
+  showStatus("");
+  advancedSearchForm.elements.query.focus();
+  loadBooks();
+}
+
 searchAction.addEventListener("click", () => startLookup("search"));
 returnAction.addEventListener("click", () => startLookup("return"));
 addAction.addEventListener("click", () => startAddBook());
+advancedSearchAction.addEventListener("click", startAdvancedSearch);
 addBookButton.addEventListener("click", () =>
   startAddBook(scannedCodeUnmatched ? "" : searchInput.value.trim())
 );
 printAllQrButton.addEventListener("click", printAllBookQrs);
+downloadBooksButton.addEventListener("click", downloadBooksCsv);
 window.addEventListener("afterprint", () => {
   page.classList.remove("page--bulk-qr-ready");
   bulkQrPrint.replaceChildren();
@@ -772,6 +985,21 @@ if (returnScanMode) {
   stopQrScanner();
 }
 renderResults();
+});
+
+advancedSearchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  renderAdvancedResults();
+});
+
+advancedSearchForm.addEventListener("input", renderAdvancedResults);
+
+advancedSearchForm.addEventListener("reset", () => {
+  window.setTimeout(() => {
+    if (lookupMode === "advanced" && !searchView.hidden) {
+      renderAdvancedResults();
+    }
+  }, 0);
 });
 
 addBookForm.addEventListener("submit", (event) => {
@@ -992,6 +1220,7 @@ homeButton.addEventListener("click", () => {
   page.classList.remove("page--qr-ready");
   page.classList.remove("page--details-qr-ready");
   page.classList.remove("page--return-scanning");
+  page.classList.remove("page--advanced-search");
   searchView.hidden = true;
   addView.hidden = true;
   actions.hidden = false;
@@ -1003,6 +1232,9 @@ homeButton.addEventListener("click", () => {
   showStatus("");
   addBookForm.reset();
   addBookForm.hidden = false;
+  advancedSearchForm.reset();
+  advancedSearchForm.hidden = true;
+  searchForm.hidden = false;
   qrImage.removeAttribute("src");
   qrImage.alt = "";
   qrCaption.textContent = "";
