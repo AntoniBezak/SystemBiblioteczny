@@ -1,4 +1,4 @@
-var BOOKS_API_VERSION = "2026-10-25-lending-1";
+var BOOKS_API_VERSION = "2026-10-27-binder-layer-1";
 var VALID_BOOK_STATUSES = ["Na półce", "Nie odłożona", "Pożyczona"];
 
 function setupBookApi() {
@@ -128,6 +128,7 @@ function getBookHeaders(sheet) {
     "publication date",
     "publishing house",
     "illustrator",
+    "binder/layer",
     "status",
     "borrower",
   ];
@@ -142,7 +143,7 @@ function getBookHeaders(sheet) {
 
 function getBookFields(values, prefix) {
   const requiredFields = ["title", "author", "color1", "color2", "column", "row", "location"];
-  const optionalFields = ["publicationDate", "publishingHouse", "illustrator", "status", "borrower"];
+  const optionalFields = ["publicationDate", "publishingHouse", "illustrator", "binderLayer", "status", "borrower"];
   const fields = requiredFields.concat(optionalFields);
   const book = {};
 
@@ -177,6 +178,7 @@ function getBookHeaderForField(field) {
     publicationDate: "publication date",
     publishingHouse: "publishing house",
     illustrator: "illustrator",
+    binderLayer: "binder/layer",
   };
   return headersByField[field] || field.toLowerCase();
 }
@@ -186,6 +188,7 @@ function getBookFieldForHeader(header) {
     "publication date": "publicationDate",
     "publishing house": "publishingHouse",
     illustrator: "illustrator",
+    "binder/layer": "binderLayer",
   };
   return fieldsByHeader[header] || header;
 }

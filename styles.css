@@ -107,6 +107,7 @@ input {
 .actions[hidden],
 .search-view[hidden],
 .add-view[hidden],
+.borrowed-books-view[hidden],
 .advanced-search-form[hidden] {
   display: none;
 }
@@ -224,6 +225,86 @@ input {
   width: min(100%, 640px);
   align-self: center;
   margin: auto;
+}
+
+.borrowed-books-view {
+  width: min(100%, 840px);
+  align-self: center;
+  margin: auto;
+}
+
+.borrowed-books-view__title {
+  margin: 0 0 18px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.borrowed-books-view__status {
+  margin: 0 0 14px;
+  color: #686d64;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.borrowed-books-view__status--error {
+  color: #9b3830;
+}
+
+.borrowed-books-list {
+  display: grid;
+  max-height: min(68vh, 720px);
+  gap: 10px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 2px;
+  list-style: none;
+}
+
+.borrowed-books-list[hidden] {
+  display: none;
+}
+
+.borrowed-books-list__item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 18px;
+  border: 1px solid #e2e1d9;
+  border-radius: 8px;
+  background: #fbfaf7;
+}
+
+.borrowed-books-list__details {
+  min-width: 0;
+}
+
+.borrowed-books-list__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.borrowed-books-list__author {
+  margin: 4px 0 0;
+  color: #686d64;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.borrowed-books-list__borrower {
+  flex: 0 0 auto;
+  margin: 0;
+  color: #9b3830;
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.4;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .add-book-form {
@@ -842,6 +923,17 @@ input {
     grid-template-columns: 1fr;
     gap: 14px;
     padding: 18px;
+  }
+
+  .borrowed-books-list__item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+  }
+
+  .borrowed-books-list__borrower {
+    text-align: left;
   }
 
   .advanced-search-form {

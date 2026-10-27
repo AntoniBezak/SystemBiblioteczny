@@ -1,6 +1,9 @@
 const actions = document.querySelector(".actions");
 const page = document.querySelector(".page");
 const homeButton = document.querySelector(".home-button");
+const borrowedBooksView = document.querySelector(".borrowed-books-view");
+const borrowedBooksStatus = document.querySelector(".borrowed-books-view__status");
+const borrowedBooksList = document.querySelector(".borrowed-books-list");
 const searchView = document.querySelector(".search-view");
 const addView = document.querySelector(".add-view");
 const searchInput = document.querySelector("#book-search");
@@ -13,6 +16,7 @@ const searchAction = document.querySelector('[data-action="search"]');
 const returnAction = document.querySelector('[data-action="return"]');
 const addAction = document.querySelector('[data-action="add"]');
 const advancedSearchAction = document.querySelector('[data-action="advanced-search"]');
+const showBorrowedBooksAction = document.querySelector('[data-action="show-borrowed-books"]');
 const searchStatus = document.querySelector(".search-status");
 const addBookButton = document.querySelector(".add-book-button");
 const addBookForm = document.querySelector(".add-book-form");
@@ -35,7 +39,7 @@ const downloadBooksButton = document.querySelector('[data-action="download-books
 const advancedFunctionsMenu = document.querySelector(".advanced-functions");
 const advancedFunctionsStatus = document.querySelector(".advanced-functions__status");
 const bulkQrPrint = document.querySelector(".bulk-qr-print");
-const booksApiVersion = "2026-10-25-lending-1";
+const booksApiVersion = "2026-10-27-binder-layer-1";
 const booksUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT62yhghPmouKRZLZ2EuJL6gWEyj_dH-VLSv7_gboYX84xUVuDMIBCzMkEF3xPxzzdaGMtb2CpkA3lu/pub?output=csv";
 const booksApiUrl = window.BOOKS_API_URL ?? "";
 let books = [];
@@ -122,6 +126,7 @@ function createBooksCsv(loadedBooks) {
     "Publication date",
     "Publishing house",
     "Illustrator",
+    "Binder/Layer",
     "status",
     "Borrower",
   ];
@@ -136,6 +141,7 @@ function createBooksCsv(loadedBooks) {
     book.publicationDate,
     book.publishingHouse,
     book.illustrator,
+    book.binderLayer,
     book.status,
     book.borrower,
   ]);
@@ -248,6 +254,7 @@ function getBookFormValues(book) {
     publicationDate: book.publicationDate,
     publishingHouse: book.publishingHouse,
     illustrator: book.illustrator,
+    binderLayer: book.binderLayer,
     status: book.status,
     borrower: book.borrower,
   };
@@ -316,6 +323,7 @@ function parseCsv(csv) {
   const publicationDateIndex = headers.indexOf("publication date");
   const publishingHouseIndex = headers.indexOf("publishing house");
   const illustratorIndex = headers.indexOf("illustrator");
+  const binderLayerIndex = headers.indexOf("binder/layer");
   const statusIndex = headers.indexOf("status");
 
   const requiredHeaders = ["title", "author", "color1", "color2", "column", "row", "location", "status", "borrower"];
@@ -335,6 +343,7 @@ function parseCsv(csv) {
       publicationDate: (values[publicationDateIndex] ?? "").trim(),
       publishingHouse: (values[publishingHouseIndex] ?? "").trim(),
       illustrator: (values[illustratorIndex] ?? "").trim(),
+      binderLayer: (values[binderLayerIndex] ?? "").trim(),
       status: (values[statusIndex] ?? "").trim(),
       borrower: (values[headers.indexOf("borrower")] ?? "").trim(),
     }))
@@ -365,9 +374,69 @@ function showStatus(message) {
 function renderCurrentResults() {
   if (lookupMode === "advanced") {
     renderAdvancedResults();
-  } else {
+  } else if (lookupMode !== "borrowed") {
     renderResults();
   }
+}
+
+function renderBorrowedBooks(loadedBooks) {
+  const borrowedBooks = loadedBooks.filter((book) => book.status === "Pożyczona");
+  const fragment = document.createDocumentFragment();
+
+  borrowedBooks.forEach((book) => {
+    const item = document.createElement("li");
+    const details = document.createElement("div");
+    const title = document.createElement("h2");
+    const author = document.createElement("p");
+    const borrower = document.createElement("p");
+
+    item.className = "borrowed-books-list__item";
+    details.className = "borrowed-books-list__details";
+    title.className = "borrowed-books-list__title";
+    title.textContent = book.title;
+    author.className = "borrowed-books-list__author";
+    author.textContent = book.author;
+    borrower.className = "borrowed-books-list__borrower";
+    borrower.textContent = book.borrower.trim()
+      ? `Wypożyczona przez: ${book.borrower}`
+      : "Nie podano osoby wypożyczającej.";
+    details.append(title, author);
+    item.append(details, borrower);
+    fragment.append(item);
+  });
+
+  borrowedBooksList.replaceChildren(fragment);
+  borrowedBooksStatus.classList.remove("borrowed-books-view__status--error");
+  borrowedBooksStatus.textContent = borrowedBooks.length === 0
+    ? "Brak pożyczonych książek."
+    : `Liczba pożyczonych książek: ${borrowedBooks.length}.`;
+  borrowedBooksList.hidden = borrowedBooks.length === 0;
+}
+
+async function showBorrowedBooks() {
+  stopQrScanner();
+  advancedFunctionsMenu.open = false;
+  lookupMode = "borrowed";
+  returnScanMode = false;
+  pendingScannedCode = undefined;
+  borrowedBooksView.hidden = false;
+  searchView.hidden = true;
+  addView.hidden = true;
+  actions.hidden = true;
+  page.classList.remove("page--book-selected", "page--return-scanning", "page--advanced-search");
+  borrowedBooksList.replaceChildren();
+  borrowedBooksList.hidden = true;
+  borrowedBooksStatus.classList.remove("borrowed-books-view__status--error");
+  borrowedBooksStatus.textContent = "Wczytywanie księgozbioru…";
+
+  const loadedBooks = await loadBooks(true);
+  if (!loadedBooks) {
+    borrowedBooksStatus.classList.add("borrowed-books-view__status--error");
+    borrowedBooksStatus.textContent = "Nie udało się wczytać księgozbioru. Sprawdź połączenie i spróbuj ponownie.";
+    return;
+  }
+
+  renderBorrowedBooks(loadedBooks);
 }
 
 function stopQrScanner(message = "") {
@@ -529,6 +598,7 @@ function showBookDetails(book) {
       ["Data publikacji", book.publicationDate],
       ["Wydawnictwo", book.publishingHouse],
       ["Ilustrator", book.illustrator],
+      ["Segregator / warstwa", book.binderLayer],
     );
     fields.push(["Kolor grzbietu", book.color]);
   }
@@ -641,6 +711,7 @@ function renderAdvancedResults() {
     ["illustrator", "illustrator"],
     ["publishingHouse", "publishingHouse"],
     ["publicationDate", "publicationDate"],
+    ["binderLayer", "binderLayer"],
     ["color2", "color2"],
     ["color", "color"],
     ["location", "location"],
@@ -715,6 +786,7 @@ function matchesAdvancedSearch(book, queryTerms, criteria) {
     book.publicationDate,
     book.publishingHouse,
     book.illustrator,
+    book.binderLayer,
     book.status,
     book.borrower,
   ].join(" "));
@@ -773,6 +845,7 @@ function loadBooks(forceRefresh = false) {
 }
 
 function startAddBook(title = "") {
+  borrowedBooksView.hidden = true;
   page.classList.remove("page--book-selected");
   page.classList.remove("page--qr-ready");
   page.classList.remove("page--return-scanning");
@@ -800,6 +873,7 @@ function startAddBook(title = "") {
 }
 
 function startEditBook(book) {
+  borrowedBooksView.hidden = true;
   stopQrScanner();
   page.classList.remove("page--book-selected");
   page.classList.remove("page--details-qr-ready");
@@ -822,6 +896,7 @@ function startEditBook(book) {
   addBookForm.elements.publicationDate.value = book.publicationDate;
   addBookForm.elements.publishingHouse.value = book.publishingHouse;
   addBookForm.elements.illustrator.value = book.illustrator;
+  addBookForm.elements.binderLayer.value = book.binderLayer || "";
   addBookForm.elements.status.value = book.status || "Na półce";
   addBookForm.elements.borrower.value = book.borrower || "";
   pendingTargetBook = book;
@@ -901,6 +976,7 @@ function startBookRequestTimeout() {
 
 function startLookup(mode) {
   stopQrScanner();
+  borrowedBooksView.hidden = true;
   lookupMode = mode;
   returnScanMode = mode === "return";
   pendingScannedCode = undefined;
@@ -934,6 +1010,7 @@ function startLookup(mode) {
 function startAdvancedSearch() {
   stopQrScanner();
   advancedFunctionsMenu.open = false;
+  borrowedBooksView.hidden = true;
   lookupMode = "advanced";
   returnScanMode = false;
   pendingScannedCode = undefined;
@@ -963,6 +1040,7 @@ searchAction.addEventListener("click", () => startLookup("search"));
 returnAction.addEventListener("click", () => startLookup("return"));
 addAction.addEventListener("click", () => startAddBook());
 advancedSearchAction.addEventListener("click", startAdvancedSearch);
+showBorrowedBooksAction.addEventListener("click", showBorrowedBooks);
 addBookButton.addEventListener("click", () =>
   startAddBook(scannedCodeUnmatched ? "" : searchInput.value.trim())
 );
@@ -1035,6 +1113,7 @@ addBookForm.addEventListener("submit", (event) => {
     publicationDate: String(normalizedFormData.get("publicationDate")),
     publishingHouse: String(normalizedFormData.get("publishingHouse")),
     illustrator: String(normalizedFormData.get("illustrator")),
+    binderLayer: String(normalizedFormData.get("binderLayer")),
     status: String(normalizedFormData.get("status")),
     borrower: String(normalizedFormData.get("borrower")),
   };
@@ -1221,6 +1300,7 @@ homeButton.addEventListener("click", () => {
   page.classList.remove("page--details-qr-ready");
   page.classList.remove("page--return-scanning");
   page.classList.remove("page--advanced-search");
+  borrowedBooksView.hidden = true;
   searchView.hidden = true;
   addView.hidden = true;
   actions.hidden = false;

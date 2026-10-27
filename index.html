@@ -75,9 +75,18 @@
           <button class="advanced-functions__item" type="button" data-action="advanced-search">
             Wyszukiwanie zaawansowane
           </button>
+          <button class="advanced-functions__item" type="button" data-action="show-borrowed-books">
+            Pokaż pożyczone książki
+          </button>
           <p class="advanced-functions__status" role="status" aria-live="polite" hidden></p>
         </div>
       </details>
+
+      <section class="borrowed-books-view" aria-label="Pożyczone książki" hidden>
+        <h1 class="borrowed-books-view__title">Pożyczone książki</h1>
+        <p class="borrowed-books-view__status" role="status" aria-live="polite"></p>
+        <ul class="borrowed-books-list"></ul>
+      </section>
 
       <section class="search-view" aria-label="Wyszukiwanie książek" hidden>
         <form class="search-form" role="search">
@@ -190,6 +199,7 @@
           <input name="targetPublicationDate" type="hidden" value="">
           <input name="targetPublishingHouse" type="hidden" value="">
           <input name="targetIllustrator" type="hidden" value="">
+          <input name="targetBinderLayer" type="hidden" value="">
           <input name="targetStatus" type="hidden" value="">
           <input name="targetBorrower" type="hidden" value="">
           <input name="status" type="hidden" value="Na półce">
@@ -233,6 +243,10 @@
           <label class="add-book-field">
             <span>Ilustrator</span>
             <input name="illustrator" type="text" maxlength="200">
+          </label>
+          <label class="add-book-field">
+            <span>Segregator / warstwa</span>
+            <input name="binderLayer" type="text" maxlength="200">
           </label>
           <button class="add-book-submit" type="submit">Dodaj książkę</button>
         </form>

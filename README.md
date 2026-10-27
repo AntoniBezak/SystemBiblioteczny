@@ -91,7 +91,7 @@ i opisany wariant to gałąź `main` oraz `/(root)`.
 1. W Google Sheets otwórz arkusz używany jako baza książek. W pierwszym
    wierszu umieść nagłówki: `Title`, `Author`, `Color1`, `Color2`, `Column`,
    `Row`, `Location`, `Publication date`, `Publishing house`, `Illustrator`,
-   `status` i `Borrower`.
+   `Binder/Layer`, `status` i `Borrower`.
    Każda książka powinna zajmować jeden wiersz.
 2. Wybierz **Plik → Udostępnij → Opublikuj w internecie**.
 3. Wybierz właściwą zakładkę arkusza oraz format **Wartości rozdzielane
@@ -123,6 +123,11 @@ nie musisz powtarzać poniższych kroków. Dla nowego arkusza lub wdrożenia:
    aktualnego, wpisz go jako wartość `window.BOOKS_API_URL` w `config.js`
    i prześlij zmieniony plik do repozytorium.
 
+Formularz dodawania i edycji zapisuje wartość pola **Segregator / warstwa**
+w kolumnie `Binder/Layer`. Po dodaniu lub zmianie tej kolumny w arkuszu
+zaktualizuj i wdróż Apps Script: **Wdróż → Zarządzaj wdrożeniami → Edytuj →
+Nowa wersja → Wdróż**.
+
 Publiczny URL Apps Script nie jest zabezpieczeniem dostępu. Przy ustawieniu
 dostępu dla każdego każdy odwiedzający może dodawać, edytować i usuwać wpisy;
 nie używaj endpointu z wrażliwymi danymi.
@@ -133,7 +138,9 @@ Przetestuj wyszukiwanie, otwieranie szczegółów, dodawanie, edycję, usuwanie
 oraz drukowanie kodu. Sprawdź również funkcję **Funkcje zaawansowane →
 Wydrukuj kody wszystkich książek z bazy danych** oraz pobieranie księgozbioru
 jako pliku CSV. Plik zawiera wszystkie kolumny książek, w tym status i
-wypożyczającego. Wyszukiwanie zaawansowane pozwala łączyć dowolne słowa z
+wypożyczającego. Pozycja **Pokaż pożyczone książki** wyświetla aktualną listę
+pożyczonych tytułów wraz z osobami, które je wypożyczyły. Wyszukiwanie
+zaawansowane pozwala łączyć dowolne słowa z
 kryteriami dotyczącymi autora, ilustratora, wydawnictwa, kolorów i położenia
 książki; dopasowanie nie uwzględnia wielkości liter ani polskich znaków
 diakrytycznych. Operacje zapisu wykonuj na testowym wpisie albo w testowym
