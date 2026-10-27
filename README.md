@@ -165,7 +165,9 @@ git push
 
 GitHub Pages opublikuje nową wersję po zakończeniu zadania w **Actions**.
 Odśwież stronę z pominięciem pamięci podręcznej, jeśli przeglądarka nadal
-pokazuje poprzednią wersję.
+pokazuje poprzednią wersję. Przy zmianie `app.js` lub `config.js` zwiększ też
+parametr `v` w ich znacznikach `<script>` w `index.html`; zapobiega to użyciu
+starej kopii skryptu z pamięci podręcznej GitHub Pages lub przeglądarki.
 
 Zmiany w `apps-script/Code.gs` wymagają osobnej publikacji w Google Apps Script:
 **Wdróż → Zarządzaj wdrożeniami → Edytuj → Nowa wersja → Wdróż**. Samo

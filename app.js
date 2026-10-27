@@ -114,6 +114,10 @@ function setAdvancedFunctionsStatus(message, isError = false) {
   advancedFunctionsStatus.hidden = message === "";
 }
 
+function getApiVersionError(receivedVersion) {
+  return `Wersja Apps Script (${receivedVersion || "brak odpowiedzi"}) nie zgadza się z wersją strony (${booksApiVersion}). Odśwież stronę z pominięciem pamięci podręcznej i spróbuj ponownie.`;
+}
+
 function createBooksCsv(loadedBooks) {
   const headers = [
     "Title",
@@ -1193,13 +1197,13 @@ window.addEventListener("message", (event) => {
   }
 
   if (pendingRequestPhase === "version-check") {
-    if (!event.data.ok || event.data.apiVersion !== booksApiVersion) {
+    if (event.data.apiVersion !== booksApiVersion) {
       window.clearTimeout(addRequestTimer);
       addRequestPending = false;
       pendingRequestPhase = undefined;
       pendingRequestId = undefined;
       addBookSubmit.disabled = false;
-      const versionError = "Wdrożona wersja Apps Script jest nieaktualna. Zaktualizuj apps-script/Code.gs i wdróż nową wersję; żądana operacja nie została wysłana.";
+      const versionError = getApiVersionError(event.data.apiVersion);
       if (pendingOperation === "delete" || pendingOperation === "set-status" || pendingOperation === "lend") {
         bookDetailsActions.querySelectorAll("button").forEach((button) => {
           button.disabled = false;
@@ -1207,6 +1211,25 @@ window.addEventListener("message", (event) => {
         setBookActionStatus(versionError, true);
       } else {
         setAddStatus(versionError, true);
+      }
+      pendingOperation = undefined;
+      return;
+    }
+
+    if (!event.data.ok) {
+      window.clearTimeout(addRequestTimer);
+      addRequestPending = false;
+      pendingRequestPhase = undefined;
+      pendingRequestId = undefined;
+      addBookSubmit.disabled = false;
+      const errorMessage = event.data.message || "Nie udało się sprawdzić wersji Apps Script.";
+      if (pendingOperation === "delete" || pendingOperation === "set-status" || pendingOperation === "lend") {
+        bookDetailsActions.querySelectorAll("button").forEach((button) => {
+          button.disabled = false;
+        });
+        setBookActionStatus(errorMessage, true);
+      } else {
+        setAddStatus(errorMessage, true);
       }
       pendingOperation = undefined;
       return;
@@ -1227,7 +1250,7 @@ window.addEventListener("message", (event) => {
 
   if (!event.data.ok || event.data.apiVersion !== booksApiVersion) {
     const errorMessage = event.data.apiVersion !== booksApiVersion
-      ? "Nie można potwierdzić zgodności wdrożenia Apps Script. Sprawdź wdrożoną wersję i arkusz przed ponowną próbą."
+      ? getApiVersionError(event.data.apiVersion)
       : event.data.message || "Operacja nie powiodła się.";
     if (pendingOperation === "delete" || pendingOperation === "set-status" || pendingOperation === "lend") {
       bookDetailsActions.querySelectorAll("button").forEach((button) => {
