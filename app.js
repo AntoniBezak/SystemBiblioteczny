@@ -370,6 +370,38 @@ function normalizeSearchValue(value) {
     .replace(/\s+/g, " ");
 }
 
+function getBookSearchText(book) {
+  return normalizeSearchValue([
+    book.title,
+    book.author,
+    book.color,
+    book.color2,
+    book.column,
+    book.row,
+    book.location,
+    book.publicationDate,
+    book.publishingHouse,
+    book.illustrator,
+    book.binderLayer,
+    book.status,
+    book.borrower,
+  ].join(" "));
+}
+
+function matchesBookSearch(book, query) {
+  const normalizedQuery = normalizeSearchValue(query);
+  if (normalizedQuery === "") {
+    return false;
+  }
+
+  return matchesBookSearchTerms(book, normalizedQuery.split(" "));
+}
+
+function matchesBookSearchTerms(book, queryTerms) {
+  const searchableText = getBookSearchText(book);
+  return queryTerms.every((term) => searchableText.includes(term));
+}
+
 function showStatus(message) {
   searchStatus.textContent = message;
   searchStatus.hidden = message === "";
@@ -596,15 +628,15 @@ function showBookDetails(book) {
     ["Szafka", book.location],
     ["Kolumna", book.column],
     ["Półka", book.row],
+    ["Segregator / warstwa", book.binderLayer],
+    ["Kolor grzbietu", book.color],
   ];
   if (lookupMode !== "return") {
     fields.push(
       ["Data publikacji", book.publicationDate],
       ["Wydawnictwo", book.publishingHouse],
       ["Ilustrator", book.illustrator],
-      ["Segregator / warstwa", book.binderLayer],
     );
-    fields.push(["Kolor grzbietu", book.color]);
   }
   const list = document.createElement("dl");
   list.className = "book-details__fields";
@@ -645,7 +677,7 @@ function showBookDetails(book) {
 }
 
 function renderResults() {
-  const query = normalizeText(searchInput.value);
+  const query = normalizeSearchValue(searchInput.value);
   bookResults.replaceChildren();
   bookDetails.hidden = true;
   bookDetails.replaceChildren();
@@ -665,13 +697,7 @@ function renderResults() {
     return;
   }
 
-  const matches = books.filter((book) => {
-    const searchableText = lookupMode === "return"
-      ? `${book.title} ${book.author}`
-      : `${book.title} ${book.author}`;
-    return normalizeText(searchableText).includes(query)
-      || (lookupMode === "return" && normalizeText(book.title).includes(query));
-  });
+  const matches = books.filter((book) => matchesBookSearch(book, searchInput.value));
 
   if (matches.length === 0) {
     showStatus(lookupMode === "return"
@@ -779,23 +805,7 @@ function renderAdvancedResults() {
 }
 
 function matchesAdvancedSearch(book, queryTerms, criteria) {
-  const searchableText = normalizeSearchValue([
-    book.title,
-    book.author,
-    book.color,
-    book.color2,
-    book.column,
-    book.row,
-    book.location,
-    book.publicationDate,
-    book.publishingHouse,
-    book.illustrator,
-    book.binderLayer,
-    book.status,
-    book.borrower,
-  ].join(" "));
-
-  return queryTerms.every((term) => searchableText.includes(term))
+  return matchesBookSearchTerms(book, queryTerms)
     && criteria.every(([bookField, terms]) =>
       terms.every((term) => normalizeSearchValue(book[bookField]).includes(term))
     );
